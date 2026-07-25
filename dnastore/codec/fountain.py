@@ -128,8 +128,16 @@ class FountainCodec(Codec):
             return seed, neighbors, payload
 
         droplets: list[tuple[int, list[int], bytearray]] = []
+        # A pure multiplier degenerates for small k: at k=1, even a 2.5x
+        # redundancy target is just 2 total strands -- razor-thin against
+        # combined synthesis + independent per-read sequencing dropout,
+        # and the failure mode this fixes was found via a real CI run
+        # hitting exactly this (a tiny 2-byte payload with only 2 strands
+        # both getting lost simultaneously). Adding a small absolute floor
+        # on top of the multiplier keeps small files comfortably redundant
+        # too, not just large ones.
         batch_size = max(1, int(k * self.redundancy) - k) or max(1, k // 4)
-        target = max(k, int(k * self.redundancy))
+        target = max(k + 4, int(k * self.redundancy))
 
         # Generate an initial batch, then keep growing until a self-check
         # peeling decode (no simulated transmission errors -- this only
