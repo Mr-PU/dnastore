@@ -332,7 +332,7 @@ class DNAStorage:
                 if not stripe_data and num_stripes > 1:
                     continue
                 k = max(1, -(-len(stripe_data) // capacity)) if stripe_data else 1
-                m = max(1, min(round(k * self.parity_fraction), 254 - k))
+                m = max(3, min(round(k * self.parity_fraction), 254 - k))
                 rs = ReedSolomonErasureCoder(data_shards=k, parity_shards=m)
                 blocks = rs.encode(stripe_data)
                 stripes_info.append({"k": k, "m": m, "shard_len": len(blocks[0].payload), "length": len(stripe_data)})
