@@ -1,6 +1,6 @@
 # dnastore
 
-[![CI](https://github.com/yourname/dnastore/actions/workflows/ci.yml/badge.svg)](https://github.com/yourname/dnastore/actions/workflows/ci.yml)
+[![CI](https://github.com/Mr-PU/dnastore/actions/workflows/ci.yml/badge.svg)](https://github.com/Mr-PU/dnastore/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/dnastore.svg)](https://pypi.org/project/dnastore/)
 
 A programmable storage abstraction over DNA. `store()`, `retrieve()`, `update()`, `delete()` -- same shape as an object storage SDK, but backed by a simulated (or, with real synthesis/sequencing hardware, actual) DNA archive.
