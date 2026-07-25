@@ -1,0 +1,43 @@
+services:
+  # Runs the pytest suite against what was actually built into the image
+  # (no volume mounts here deliberately -- this should test the image,
+  # not your live working tree; use a local `pytest` install for that).
+  test:
+    build: .
+    command: ["python", "-m", "pytest", "-v"]
+
+  smoke:
+    build: .
+    command: ["python", "smoke_test.py"]
+
+  benchmark:
+    build: .
+    command: ["python", "benchmarks/codec_comparison.py"]
+
+  quickstart:
+    build: .
+    command: ["python", "examples/quickstart.py"]
+
+  bio-interop:
+    build: .
+    command: ["python", "examples/bio_interop.py"]
+
+  stress-test:
+    build: .
+    command: ["python", "examples/stress_test.py"]
+
+  # FUSE mounts need elevated privileges inside the container.
+  vfs:
+    build: .
+    command: ["python", "examples/mount_vfs.py", "/mnt/dna"]
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - dna-mount:/mnt/dna
+
+volumes:
+  dna-mount:
