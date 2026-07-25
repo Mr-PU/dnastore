@@ -197,6 +197,82 @@ class FountainCodec(Codec):
                         queue.append(other_pos)
         return len(resolved) >= k
 
+    @staticmethod
+    def _gaussian_elimination_fallback(k: int, pending: list[list], resolved: dict[int, bytearray]) -> None:
+        """Pure peeling can stall before resolving every block even when
+        the underlying system is fully solvable -- this is a known
+        failure mode of LT/fountain decoders (a handful of unlucky
+        low-degree droplet losses can halt the cascade even with plenty
+        of total droplets remaining). Standard fix: fall back to
+        Gaussian elimination over GF(2) on whatever equations are left.
+
+        Every remaining pending entry is still a valid linear equation
+        (XOR of the still-unresolved blocks in `neighbors` == `payload`,
+        since resolved blocks were already subtracted out during
+        peeling). Coefficients are always 0/1 -- a droplet either
+        includes a block or doesn't -- so elimination is just XOR, no
+        GF(256) multiplication needed. This mutates `resolved` in place
+        with anything it manages to solve; it may still not solve
+        everything if the system is genuinely under-determined (not
+        enough independent equations survived), in which case the
+        caller's existing "insufficient droplets" error still fires.
+        """
+        unresolved = [i for i in range(k) if i not in resolved]
+        if not unresolved:
+            return
+        local_index = {idx: pos for pos, idx in enumerate(unresolved)}
+
+        # Forward elimination: one pivot row per bit position. Maintains
+        # the invariant that pivots[bit]'s mask has no bits set below
+        # `bit` (each row is reduced against all lower existing pivots
+        # before either matching an existing pivot or becoming a new one).
+        pivots: dict[int, tuple[int, bytearray]] = {}
+        for neighbors, payload in pending:
+            if not neighbors:
+                continue
+            mask = 0
+            for idx in neighbors:
+                mask |= 1 << local_index[idx]
+            row_payload = bytearray(payload)
+
+            while mask:
+                bit = (mask & -mask).bit_length() - 1  # lowest set bit
+                if bit in pivots:
+                    pivot_mask, pivot_payload = pivots[bit]
+                    mask ^= pivot_mask
+                    row_payload = bytearray(a ^ b for a, b in zip(row_payload, pivot_payload))
+                else:
+                    pivots[bit] = (mask, row_payload)
+                    break
+
+        # Back-substitution to full reduced row-echelon form: repeatedly
+        # eliminate any pivot's higher bits using other pivots, until no
+        # row changes. Converges because each successful elimination
+        # strictly reduces total bit-weight across all pivot rows.
+        changed = True
+        while changed:
+            changed = False
+            for bit, (mask, payload) in list(pivots.items()):
+                higher_bits = mask & ~(1 << bit)
+                b = higher_bits
+                while b:
+                    other_bit = (b & -b).bit_length() - 1
+                    b &= b - 1
+                    if other_bit in pivots and other_bit != bit:
+                        other_mask, other_payload = pivots[other_bit]
+                        new_mask = mask ^ other_mask
+                        if new_mask != mask:
+                            payload = bytearray(x ^ y for x, y in zip(payload, other_payload))
+                            mask = new_mask
+                            pivots[bit] = (mask, payload)
+                            changed = True
+
+        for bit, (mask, payload) in pivots.items():
+            if mask == (1 << bit):
+                idx = unresolved[bit]
+                if idx not in resolved:
+                    resolved[idx] = payload
+
     def decode(self, strands: list[Strand], original_length: int) -> bytes:
         k = max(1, -(-original_length // self.segment_bytes))
         header_len_bases = len(_naive.encode(bytes(SEED_BYTES))[0])
@@ -256,6 +332,9 @@ class FountainCodec(Codec):
             resolved[idx] = bytearray(payload)
             neighbors.clear()
             queue.extend(_apply_resolution(idx, resolved[idx]))
+
+        if len(resolved) < k:
+            self._gaussian_elimination_fallback(k, pending, resolved)
 
         if len(resolved) < k:
             raise FountainDecodeError(
