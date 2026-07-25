@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "A programmable storage abstraction over DNA: store(), retrieve(), delete(), update() -- with a simulator you can run today and a pluggable seam for real synthesis/sequencing hardware."
 readme = "README.md"
 license = { text = "Apache-2.0" }
-authors = [{ name = "Your Name", email = "you@example.com" }]
+authors = [{ name = "Prashant Upadhyay", email = "prashantupadhyay0@gmail.com" }]
 requires-python = ">=3.10"
 keywords = ["dna-storage", "bioinformatics", "storage", "erasure-coding", "fountain-code", "reed-solomon"]
 classifiers = [
@@ -28,8 +28,8 @@ bio = ["biopython>=1.80"]
 dev = ["pytest>=7.0"]
 
 [project.urls]
-Homepage = "https://github.com/yourname/dnastore"
-Repository = "https://github.com/yourname/dnastore"
+Homepage = "https://github.com/Mr-PU/dnastore"
+Repository = "https://github.com/Mr-PU/dnastore"
 
 [tool.hatch.build.targets.wheel]
 packages = ["dnastore"]
