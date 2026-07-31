@@ -1,0 +1,13 @@
+Persistence overhead benchmark -- after-fix
+commit: 7bbcc4f   time: 2026-07-30 19:37:58
+state_path/pool_path ARE set for every run below (disk persistence ON) --
+this is the scenario the README's own performance table never measures.
+
+codec      size     strands   store (s)    retrieve (s)
+-------------------------------------------------------
+fountain   50 KB    4000      0.401        0.420       
+fountain   200 KB   16000     1.686        1.759       
+fountain   500 KB   40000     4.411        4.573       
+rotating   50 KB    2240      0.851        4.158       
+rotating   200 KB   8960      3.447        17.312      
+naive      500 KB   14336     7.931        29.564      

@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Fix: `store()` was O(n^2) in strand count whenever on-disk persistence
+  is enabled (`pool_path`/`state_path` set) -- `PhysicalPool.write()`
+  re-serialized the *entire* pool to disk on every single strand write,
+  and `SynthesisSimulator.synthesize()` calls `write()` once per strand,
+  so one `store()` call triggered N full-pool rewrites instead of 1,
+  with cost compounding further as the archive grows. Fixed by batching:
+  `write()` now only updates the in-memory pool, and a new `flush()` is
+  called once per `synthesize()` batch instead of once per strand.
+  Benchmarked 7x-330x faster `store()` across tested sizes, with no
+  change to `retrieve()` timing or the on-disk format.
+
 ## 0.1.0 -- initial release
 
 - FASTA/FASTQ export (`dnastore.formats`, plus `DNAStorage.export_object_fasta()`,

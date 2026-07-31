@@ -43,6 +43,7 @@ class SynthesisSimulator(SynthesisBackend):
 
             sequence = self._apply_substitutions(order.sequence)
             self.pool.write(order.strand_id, sequence, order.primer_forward, order.primer_reverse)
+        self.pool.flush()
 
     def _apply_substitutions(self, sequence: str) -> str:
         if self.substitution_rate <= 0:
