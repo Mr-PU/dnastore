@@ -26,13 +26,16 @@ class PhysicalPool:
             self._load()
 
     def write(self, strand_id: str, sequence: str | None, primer_forward: str, primer_reverse: str) -> None:
+        """Record a strand in memory only. Does not persist to disk --
+        callers writing many strands in a batch (e.g. SynthesisSimulator)
+        must call flush() once after the batch, otherwise the whole pool
+        would be re-serialized to disk on every single strand."""
         with self._lock:
             self._records[strand_id] = {
                 "sequence": sequence,
                 "primer_forward": primer_forward,
                 "primer_reverse": primer_reverse,
             }
-            self._maybe_persist()
 
     def read_by_primer(self, primer_forward: str, primer_reverse: str) -> list[tuple[str, str | None]]:
         with self._lock:
@@ -66,7 +69,7 @@ class PhysicalPool:
             ]
             for strand_id in to_remove:
                 del self._records[strand_id]
-            self._maybe_persist()
+            self.flush()
             return len(to_remove)
 
     def stats(self) -> dict:
@@ -75,7 +78,10 @@ class PhysicalPool:
             dropped = sum(1 for r in self._records.values() if r["sequence"] is None)
             return {"total_strands": total, "dropped_at_synthesis": dropped}
 
-    def _maybe_persist(self) -> None:
+    def flush(self) -> None:
+        """Persist the current in-memory pool to disk, if a path was
+        configured. Call once after writing a batch of strands -- not
+        per strand, which would re-serialize the whole pool every time."""
         if self.path:
             self._save()
 
